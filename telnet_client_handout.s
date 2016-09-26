@@ -122,6 +122,10 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
+    # Arguments for negotiate():
+    #   negotiate(int sock, unsigned char* buf, int len);
+    .lcomm negotiateArgs,      24
+
 #####################################################################
 
 .text
