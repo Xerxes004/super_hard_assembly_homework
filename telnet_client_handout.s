@@ -293,12 +293,21 @@
     call  cWriteString
     addl  $8, %esp
 
-    # TODO:  set up terminal for raw I/O
+    jmp setup_terminal_for_raw_io
+
+  # Added by WK
+  setup_terminal_for_raw_io:
+    # Set up terminal for raw I/O
+    # Call terminal_set() with no args
+    call terminal_set
     
-    
-    # WK: call tcgetattr(STDIN_FILENO, &tin);
-    
-    
+    # Call atexit with the pointer to function terminal_reset on the stack
+    pushl $terminal_reset
+    call atexit
+    addl $4, %esp   
+ 
+    jmp network_read_write_loop
+
   network_read_write_loop:
     # Head of infinite loop to read and write the socket 
     # while (1) {
