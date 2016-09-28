@@ -117,6 +117,10 @@
     .lcomm serverSockaddr,     16         # i.e., 2+2+4+8  -- see above structs
     .equ   serverSockaddrLen,  16
 
+    # TODO:
+    # termios structure that needs to be filled in for the terminal_*
+    # functions.
+    # 
     # Read buffer for reading from stdin and the socket
     .lcomm readBuffer,       1024
     .lcomm readBufferLen,       4
@@ -132,7 +136,7 @@
     .global _start
 
   _start: 
-    # Pop argc
+    # Pop argc, storing the value into %eax
     popl  %eax
 
     # Check if we have the correct number of arguments (3), for the 
@@ -161,8 +165,9 @@
     call  cStrIP_to_Octets
     addl  $4, %esp
 
-    # Check for errors
+    # Check for errors. If %eax had a 0, then cStrIP_to_Octets had an error
     cmpl  $0, %eax
+    # jl is "jump to label"
     jl    invalid_program_arguments
 
     # Next on the stack is the port
@@ -289,7 +294,11 @@
     addl  $8, %esp
 
     # TODO:  set up terminal for raw I/O
-
+    
+    
+    # WK: call tcgetattr(STDIN_FILENO, &tin);
+    
+    
   network_read_write_loop:
     # Head of infinite loop to read and write the socket 
     # while (1) {
@@ -601,7 +610,9 @@
     movl  %esi, %edi
 
     string_length_loop: 
-        # Load the next byte from the string
+        # Load the next byte from the string.
+        # lodsb reads the byte pointed to by esi into %ala,
+        # then INCREMENTS the %esi register
         lodsb
 
         # Compare the byte to the null byte
