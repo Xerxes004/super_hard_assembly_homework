@@ -350,10 +350,20 @@
     # Put pointer to buf in %esi
     movl 8(%esp), %esi
     # if (buf[1] == DO && buf[2] == CMD_WINDOW_SIZE) {
-    
+    # skip the first byte
+    incl %esi
+    lodsb
+    cmpb %al, $0xfda
+    jne do_to_wont_and_will_to_do_loop 
     # }    
- 
+
+
+     
+    do_to_wont_and_will_to_do_loop:
+      
+    
     ret
+
 
   check_stdin_file_descriptor: 
     # if (FD_ISSET (0, ...)) {
