@@ -126,10 +126,6 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
-    # Arguments for negotiate():
-    #   negotiate(int sock, unsigned char* buf, int len);
-    .lcomm negotiateArgs,      24
-
 #####################################################################
 
 .text
@@ -338,12 +334,26 @@
     # TODO: set time structure
 
     check_socket_file_descriptor: 
-    # if (sock !=0 && FD_ISSET ...)) {
+    # else if (sock !=0 && FD_ISSET ...)) {
     # TODO: handle socket communication
     # - if error
     # - if disconnect
     # - if command string
     # - if ordinary data
+  
+  # Added by WK
+  # negotiate(int sock, unsigned char* buf, int len);
+  negotiate:
+    pushl %ebp
+    movl  %esp,%ebp
+    
+    # Put pointer to buf in %esi
+    movl 8(%esp), %esi
+    # if (buf[1] == DO && buf[2] == CMD_WINDOW_SIZE) {
+    
+    # }    
+ 
+    ret
 
   check_stdin_file_descriptor: 
     # if (FD_ISSET (0, ...)) {
