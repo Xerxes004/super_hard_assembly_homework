@@ -45,9 +45,9 @@
 
 .data
     msgInvalidArguments:
-	.asciz "Invalid IP address or port supplied.\n"
+        .asciz "Invalid IP address or port supplied.\n"
     msgIAEnd:
-      .equ msgInvalidArgumentsLen, msgIAEnd - msgInvalidArguments
+        .equ msgInvalidArgumentsLen, msgIAEnd - msgInvalidArguments
 
     msgErrorSocket:
 	.asciz "Error creating socket.\n"
@@ -83,6 +83,33 @@
     socketArgs:
       .long 2,1,6
 
+    # defines
+    ESBN:
+        .byte 0xf0
+    SUBN:
+        .byte 0xfa
+    WILL:
+        .byte 0xfb
+    WONT:
+        .byte 0xfc
+    DO:
+        .byte 0xfd
+    DONT:
+        .byte 0xfe
+    CMD:
+        .byte 0xff
+    
+    TRMW:
+        .int 80
+    TRMH:
+        .int 24
+    
+    CMD_ECHO:
+        .int 1
+    CMD_WINDOW_SIZE:
+        .int 31
+    # end defines
+    
 #####################################################################
 
 .bss
@@ -126,6 +153,9 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
+    # Temp variables for negotiate function
+    .lcomm tmp1, 12
+    .lcomm tmp2, 36
 #####################################################################
 
 .text
@@ -353,14 +383,22 @@
     # skip the first byte
     incl %esi
     lodsb
-    cmpb %al, $0xfda
-    jne do_to_wont_and_will_to_do_loop 
+    # if buf[1] == DO
+    cmpb %al, $0xfd
+    jne negotiate_loop 
+    # &&
+    lodsb
+    # if buf[2] == CMD_WINDOW_SIZE
+    cmpb %al, $31
+    jne negotiate_loop
+
+    
     # }    
 
 
      
-    do_to_wont_and_will_to_do_loop:
-      
+    negotiate_loop:
+        
     
     ret
 
