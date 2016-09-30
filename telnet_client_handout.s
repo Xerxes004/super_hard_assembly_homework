@@ -45,9 +45,9 @@
 
 .data
     msgInvalidArguments:
-	.asciz "Invalid IP address or port supplied.\n"
+        .asciz "Invalid IP address or port supplied.\n"
     msgIAEnd:
-      .equ msgInvalidArgumentsLen, msgIAEnd - msgInvalidArguments
+        .equ msgInvalidArgumentsLen, msgIAEnd - msgInvalidArguments
 
     msgErrorSocket:
 	.asciz "Error creating socket.\n"
@@ -83,6 +83,40 @@
     socketArgs:
       .long 2,1,6
 
+    # defines
+    ESBN:
+        .byte 0xf0
+    SUBN:
+        .byte 0xfa
+    WILL:
+        .byte 0xfb
+    WONT:
+        .byte 0xfc
+    DO:
+        .byte 0xfd
+    DONT:
+        .byte 0xfe
+    CMD:
+        .byte 0xff
+    
+    TRMW:
+        .byte 80
+    TRMH:
+        .byte 24
+    
+    CMD_ECHO:
+        .byte 1
+    CMD_WINDOW_SIZE:
+        .byte 31
+    # end defines
+    
+    # Temp variables for negotiate function
+    tmp1:
+        # .byte CMD, WILL, CMD_WINDOW_SIZE
+        .byte 0xff, 0xfb, 31
+    tmp2:
+        #.byte CMD, SUBN, CMD_WINDOW_SIZE, 0x00, TRMW, TRMH, CMD, ESBN
+        .byte 0xff, 0xfa, 31, 0x00, 80, 24, 0xff, 0xf0
 #####################################################################
 
 .bss
@@ -117,14 +151,14 @@
     .lcomm serverSockaddr,     16         # i.e., 2+2+4+8  -- see above structs
     .equ   serverSockaddrLen,  16
 
+    # TODO:
+    # termios structure that needs to be filled in for the terminal_*
+    # functions.
+    # 
     # Read buffer for reading from stdin and the socket
     .lcomm readBuffer,       1024
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
-
-    # Arguments for negotiate():
-    #   negotiate(int sock, unsigned char* buf, int len);
-    .lcomm negotiateArgs,      24
 
 #####################################################################
 
@@ -132,7 +166,7 @@
     .global _start
 
   _start: 
-    # Pop argc
+    # Pop argc, storing the value into %eax
     popl  %eax
 
     # Check if we have the correct number of arguments (3), for the 
@@ -161,8 +195,9 @@
     call  cStrIP_to_Octets
     addl  $4, %esp
 
-    # Check for errors
+    # Check for errors. If %eax had a 0, then cStrIP_to_Octets had an error
     cmpl  $0, %eax
+    # jl is "jump to label"
     jl    invalid_program_arguments
 
     # Next on the stack is the port
@@ -288,7 +323,20 @@
     call  cWriteString
     addl  $8, %esp
 
-    # TODO:  set up terminal for raw I/O
+    jmp setup_terminal_for_raw_io
+
+  # Added by WK
+  setup_terminal_for_raw_io:
+    # Set up terminal for raw I/O
+    # Call terminal_set() with no args
+    # TODO: call terminal_set
+    
+    # Call atexit with the pointer to function terminal_reset on the stack
+    # TODO: pushl $terminal_reset
+    # TODO: call atexit
+    addl $4, %esp   
+ 
+    jmp network_read_write_loop
 
   network_read_write_loop:
     # Head of infinite loop to read and write the socket 
@@ -320,12 +368,48 @@
     # TODO: set time structure
 
     check_socket_file_descriptor: 
-    # if (sock !=0 && FD_ISSET ...)) {
+    # else if (sock !=0 && FD_ISSET ...)) {
     # TODO: handle socket communication
     # - if error
     # - if disconnect
     # - if command string
     # - if ordinary data
+  
+  # Added by WK
+  # negotiate(int sock, unsigned char* buf, int len);
+  negotiate:
+    pushl %ebp
+    movl  %esp,%ebp
+    
+    # Put pointer to buf in %esi
+    movl 8(%esp), %esi
+    
+    # skip the first byte
+    incl %esi
+    lodsb
+    
+    # if buf[1] == DO
+    # TODO: cmpb $DO, %al
+    jne negotiate_loop 
+    
+    # &&
+    lodsb
+    
+    # if buf[2] == CMD_WINDOW_SIZE
+    # cmpb $CMD_WINDOW_SIZE, %al
+    jne negotiate_loop
+
+    # enter if-statement 1
+    
+    # exit if-statement 1 
+
+
+     
+    negotiate_loop:
+        
+    
+    ret
+
 
   check_stdin_file_descriptor: 
     # if (FD_ISSET (0, ...)) {
@@ -601,7 +685,9 @@
     movl  %esi, %edi
 
     string_length_loop: 
-        # Load the next byte from the string
+        # Load the next byte from the string.
+        # lodsb reads the byte pointed to by esi into %ala,
+        # then INCREMENTS the %esi register
         lodsb
 
         # Compare the byte to the null byte
