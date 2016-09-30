@@ -100,16 +100,23 @@
         .byte 0xff
     
     TRMW:
-        .int 80
+        .byte 80
     TRMH:
-        .int 24
+        .byte 24
     
     CMD_ECHO:
-        .int 1
+        .byte 1
     CMD_WINDOW_SIZE:
-        .int 31
+        .byte 31
     # end defines
     
+    # Temp variables for negotiate function
+    tmp1:
+        # .byte CMD, WILL, CMD_WINDOW_SIZE
+        .byte 0xff, 0xfb, 31
+    tmp2:
+        #.byte CMD, SUBN, CMD_WINDOW_SIZE, 0x00, TRMW, TRMH, CMD, ESBN
+        .byte 0xff, 0xfa, 31, 0x00, 80, 24, 0xff, 0xf0
 #####################################################################
 
 .bss
@@ -153,9 +160,6 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
-    # Temp variables for negotiate function
-    .lcomm tmp1, 12
-    .lcomm tmp2, 36
 #####################################################################
 
 .text
@@ -325,11 +329,11 @@
   setup_terminal_for_raw_io:
     # Set up terminal for raw I/O
     # Call terminal_set() with no args
-    call terminal_set
+    # TODO: call terminal_set
     
     # Call atexit with the pointer to function terminal_reset on the stack
-    pushl $terminal_reset
-    call atexit
+    # TODO: pushl $terminal_reset
+    # TODO: call atexit
     addl $4, %esp   
  
     jmp network_read_write_loop
@@ -379,21 +383,25 @@
     
     # Put pointer to buf in %esi
     movl 8(%esp), %esi
-    # if (buf[1] == DO && buf[2] == CMD_WINDOW_SIZE) {
+    
     # skip the first byte
     incl %esi
     lodsb
+    
     # if buf[1] == DO
-    cmpb %al, $0xfd
+    # TODO: cmpb $DO, %al
     jne negotiate_loop 
+    
     # &&
     lodsb
+    
     # if buf[2] == CMD_WINDOW_SIZE
-    cmpb %al, $31
+    # cmpb $CMD_WINDOW_SIZE, %al
     jne negotiate_loop
 
+    # enter if-statement 1
     
-    # }    
+    # exit if-statement 1 
 
 
      
