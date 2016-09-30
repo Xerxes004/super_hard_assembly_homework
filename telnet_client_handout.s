@@ -112,11 +112,12 @@
     
     # Temp variables for negotiate function
     tmp1:
-        # .byte CMD, WILL, CMD_WINDOW_SIZE
+        #     CMD,  WILL, CMD_WINDOW_SIZE
         .byte 0xff, 0xfb, 31
     tmp2:
-        #.byte CMD, SUBN, CMD_WINDOW_SIZE, 0x00, TRMW, TRMH, CMD, ESBN
+        #     CMD,  SUBN, CMD_WINDOW_SIZE, 0x00, TRMW, TRMH, CMD, ESBN
         .byte 0xff, 0xfa, 31, 0x00, 80, 24, 0xff, 0xf0
+
 #####################################################################
 
 .bss
@@ -386,10 +387,11 @@
     
     # skip the first byte
     incl %esi
+    # store the next byte in the %al register
     lodsb
     
     # if buf[1] == DO
-    # TODO: cmpb $DO, %al
+    cmpb $DO, %al
     jne negotiate_loop 
     
     # &&
@@ -399,17 +401,67 @@
     # cmpb $CMD_WINDOW_SIZE, %al
     jne negotiate_loop
 
-    # enter if-statement 1
+    # enter if-statement
+    pushl $0
+    pushl $3
+    pushl $tmp1
+    pushl $sockfd
+    # TODO: make cWriteSocket custom: call  cWriteSocket
+
+    # if send(sockfd, tmp1, 3, 0) < 0
+    cmpl  $0, %eax
+    jg    negotiate_premature_exit 
+
+    pushl $0
+    pushl $9
+    pushl $tmp2
+    pushl $sockfd
+    # TODO: make cWriteSocket custom: call  cWriteSocket
+
+    # if send(sockfd, tmp2, 9, 0) < 0
+    cmpl  $0, %eax
+    jg    negotiate_premature_exit
     
-    # exit if-statement 1 
+    # return inside if-statement
+    ret
+    # exit if-statement
+    
+    # else
+    # int i = 0
+    movl $0, %eax
+    # %ebx = len
+    movl 12(%esp), %ebx
 
-
-     
     negotiate_loop:
-        
+      # TODO: set buf[0] in %esi register for lodsb calls
+      movl %esp(,%ebx,1), %esi
+      lodsb
+      # if buf[i] == DO
+      cmpb $DO, %al
     
     ret
+  
+  negotiate_premature_exit:
+    movl  $1, %eax
+    int   $0x80
 
+  # WK
+  # size_t send(int sockfd, const void* buf, size_t len, int flags)
+  cSend:
+    pushl %ebp
+    movl  %esp, %ebp
+    
+    # push all registers
+    pushad
+   
+    movl  $4, %eax
+    movl  4(%esp), %ebx
+    movl  8(%esp), %ecx
+    movl  12(%esp), %edx
+    movl  $0, %esi
+
+    popad
+    ret
 
   check_stdin_file_descriptor: 
     # if (FD_ISSET (0, ...)) {
