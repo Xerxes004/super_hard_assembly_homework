@@ -386,7 +386,7 @@
     movl 8(%esp), %esi
     
     # skip the first byte
-    incl %esi
+    lodsb
     # store the next byte in the %al register
     lodsb
     
@@ -398,7 +398,7 @@
     lodsb
     
     # if buf[2] == CMD_WINDOW_SIZE
-    # cmpb $CMD_WINDOW_SIZE, %al
+    cmpb $CMD_WINDOW_SIZE, %al
     jne negotiate_loop
 
     # enter if-statement
@@ -433,11 +433,17 @@
     movl 12(%esp), %ebx
 
     negotiate_loop:
-      # TODO: set buf[0] in %esi register for lodsb calls
-      movl %esp(,%ebx,1), %esi
+      # set buf[0] in %esi register for lodsb calls
+      movl 8(%esp), %esi
       lodsb
-      # if buf[i] == DO
+      # compare buf[i] == DO
       cmpb $DO, %al
+      jne if_buf_is_will 
+      
+      # if buf[i] == DO
+            
+
+      if_buf_is_will:
     
     ret
   
