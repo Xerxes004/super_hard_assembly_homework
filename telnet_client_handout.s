@@ -447,15 +447,22 @@
     # else
     negotiate_loop_else:
       # Get byte out of array
-      cmpb WILL, (%esi)
+      movb (%esi), %al
+      cmpb WILL, %al
       jne end_negotiate_loop
-      
+      movb DO, %al
+      movb %al, (%esi)
 
   end_negotiate_loop:
+    # Increment i
     inc %edx
+    # Increment buf
+    inc %esi
+    # See if i < len
     cmpl %edx, %ecx
+    # if it is, loop again
     jl negotiate_loop
-    
+    # else return
     ret
 
   # END NEGOTIATE FUNCTION
