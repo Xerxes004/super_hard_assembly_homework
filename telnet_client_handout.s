@@ -380,7 +380,7 @@
   # negotiate(int sock, unsigned char* buf, int len);
   negotiate:
     pushl %ebp
-    movl  %esp,%ebp
+    movl  %esp, %ebp
     
     # Put pointer to buf in %esi
     movl 8(%esp), %esi
@@ -395,7 +395,7 @@
     # if buf[2] == CMD_WINDOW_SIZE
     movb 2(%esi), %al
     cmpb CMD_WINDOW_SIZE, %al
-    jne negotiate_loop
+    jne begin_negotiate_loop
 
     # enter if-statement
     pushl $0
@@ -482,6 +482,7 @@
     movl  8(%esp), %ecx
     movl  12(%esp), %edx
     movl  $0, %esi
+    int   $0x80
 
     popa
     ret
