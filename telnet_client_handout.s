@@ -117,7 +117,7 @@
     tmp2:
         #     CMD,  SUBN, CMD_WINDOW_SIZE, 0x00, TRMW, TRMH, CMD, ESBN
         .byte 0xff, 0xfa, 31, 0x00, 80, 24, 0xff, 0xf0
-
+    
 #####################################################################
 
 .bss
@@ -160,6 +160,9 @@
     .lcomm readBuffer,       1024
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
+
+    # Buf for various uses
+    .lcomm buf, 21
 
 #####################################################################
 
@@ -385,20 +388,16 @@
     # Put pointer to buf in %esi
     movl 8(%esp), %esi
     
-    # skip the first byte
-    lodsb
-    # store the next byte in the %al register
-    lodsb
-    
     # if buf[1] == DO
-    cmpb $DO, %al
-    jne negotiate_loop 
+    movb 1(%esi), %al
+    cmpb DO, %al
+    jne begin_negotiate_loop 
     
     # &&
-    lodsb
     
     # if buf[2] == CMD_WINDOW_SIZE
-    cmpb $CMD_WINDOW_SIZE, %al
+    movb 2(%esi), %al
+    cmpb CMD_WINDOW_SIZE, %al
     jne negotiate_loop
 
     # enter if-statement
@@ -425,27 +424,41 @@
     # return inside if-statement
     ret
     # exit if-statement
+   
+  begin_negotiate_loop: 
+    # int i = 0
+    movl $0, %edx
+    # reset %esi to point to buf
+    movl 8(%esp), %esi
+    # %ebx = len
+    movl 12(%esp), %ecx
+
+  negotiate_loop:
+    # Get byte out of array
+    movb (%esi), %al
+    # %al = buf[i]
+    # if buf[i] == DO
+    cmpb DO, %al
+    jne negotiate_loop_else
+    movb WONT, %al
+    # buf[i] = WONT
+    movb %al, (%esi)
     
     # else
-    # int i = 0
-    movl $0, %eax
-    # %ebx = len
-    movl 12(%esp), %ebx
-
-    negotiate_loop:
-      # set buf[0] in %esi register for lodsb calls
-      movl 8(%esp), %esi
-      lodsb
-      # compare buf[i] == DO
-      cmpb $DO, %al
-      jne if_buf_is_will 
+    negotiate_loop_else:
+      # Get byte out of array
+      cmpb WILL, (%esi)
+      jne end_negotiate_loop
       
-      # if buf[i] == DO
-            
 
-      if_buf_is_will:
+  end_negotiate_loop:
+    inc %edx
+    cmpl %edx, %ecx
+    jl negotiate_loop
     
     ret
+
+  # END NEGOTIATE FUNCTION
   
   negotiate_premature_exit:
     movl  $1, %eax
@@ -458,7 +471,7 @@
     movl  %esp, %ebp
     
     # push all registers
-    pushad
+    pusha
    
     movl  $4, %eax
     movl  4(%esp), %ebx
@@ -466,7 +479,7 @@
     movl  12(%esp), %edx
     movl  $0, %esi
 
-    popad
+    popa
     ret
 
   check_stdin_file_descriptor: 
