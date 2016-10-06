@@ -161,9 +161,6 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
-    # Buf for various uses
-    .lcomm buf, 21
-
 #####################################################################
 
 .text
