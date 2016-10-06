@@ -376,6 +376,7 @@
     # - if command string
     # - if ordinary data
   
+  # BEGIN NEGOTIATE FUNCTION
   # Added by WK
   # negotiate(int sock, unsigned char* buf, int len);
   negotiate:
@@ -402,8 +403,8 @@
     pushl $3
     pushl $tmp1
     pushl $sockfd
-    # TODO: make cWriteSocket custom: call  cWriteSocket
-
+    call cSend
+    
     # if send(sockfd, tmp1, 3, 0) < 0
     cmpl  $0, %eax
     jg    negotiate_premature_exit 
@@ -412,7 +413,7 @@
     pushl $9
     pushl $tmp2
     pushl $sockfd
-    # TODO: make cWriteSocket custom: call  cWriteSocket
+    call cSend
 
     # if send(sockfd, tmp2, 9, 0) < 0
     cmpl  $0, %eax
@@ -437,8 +438,8 @@
     # if buf[i] == DO
     cmpb DO, %al
     jne negotiate_loop_else
-    movb WONT, %al
     # buf[i] = WONT
+    movb WONT, %al
     movb %al, (%esi)
     
     # else
@@ -459,16 +460,30 @@
     cmpl %edx, %ecx
     # if it is, loop again
     jl negotiate_loop
+  
+  negotiate_send_feedback:
+    pushl $0
+    pushl 4(%esp)
+    pushl 8(%esp)
+    pushl 12(%esp)
+    # send(sockfd, buf, len, 0)
+    call cSend
+    cmpl $0, %eax
+    # if (send(sockfd, buf, len, 0) < 0)
+    jg negotiate_premature_exit    
+
     # else return
     ret
 
-  # END NEGOTIATE FUNCTION
-  
   negotiate_premature_exit:
     movl  $1, %eax
     int   $0x80
 
-  # WK
+  # END NEGOTIATE FUNCTION
+  
+  # BEGIN CSEND FUNCTION
+
+  # Wes Kelly
   # size_t send(int sockfd, const void* buf, size_t len, int flags)
   cSend:
     pushl %ebp
@@ -486,6 +501,8 @@
 
     popa
     ret
+
+  # END CSEND FUNCTION
 
   check_stdin_file_descriptor: 
     # if (FD_ISSET (0, ...)) {
