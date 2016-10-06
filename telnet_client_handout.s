@@ -442,14 +442,16 @@
     movb WONT, %al
     movb %al, (%esi)
     
-    # else
-    negotiate_loop_else:
-      # Get byte out of array
-      movb (%esi), %al
-      cmpb WILL, %al
-      jne end_negotiate_loop
-      movb DO, %al
-      movb %al, (%esi)
+  # else
+  negotiate_loop_else:
+    # Get byte out of array
+    movb (%esi), %al
+    # if buf[i] == WILL
+    cmpb WILL, %al
+    jne end_negotiate_loop
+    # buf[i] = DO
+    movb DO, %al
+    movb %al, (%esi)
 
   end_negotiate_loop:
     # Increment i
@@ -478,7 +480,6 @@
   negotiate_premature_exit:
     movl  $1, %eax
     int   $0x80
-
   # END NEGOTIATE FUNCTION
   
   # BEGIN CSEND FUNCTION
