@@ -161,6 +161,9 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
+    .lcomm atexit, 4
+
+    .lcomm ts, 8
 #####################################################################
 
 .text
@@ -330,12 +333,10 @@
   setup_terminal_for_raw_io:
     # Set up terminal for raw I/O
     # Call terminal_set() with no args
-    # TODO: call terminal_set
+    call terminal_set
     
-    # Call atexit with the pointer to function terminal_reset on the stack
-    # TODO: pushl $terminal_reset
-    # TODO: call atexit
-    addl $4, %esp   
+    # Call atexit when cExit is calledk
+    movl $terminal_reset, atexit
  
     jmp network_read_write_loop
 
@@ -365,8 +366,16 @@
     jmp   network_premature_exit
 
   check_read_file_descriptors:
+    # if (nready != 0)
+    jne check_socket_file_descriptor
     # if (nready == 0) {
-    # TODO: set time structure
+    # ts.tv_sec = 1
+    # ts.tv_usec = 0
+    movl $ts, %eax
+    movl $1,  (%eax)
+    movl $0,  4(%eax)
+    jmp network_read_write_loop 
+
 
     check_socket_file_descriptor: 
     # else if (sock !=0 && FD_ISSET ...)) {
@@ -478,8 +487,8 @@
     ret
 
   negotiate_premature_exit:
-    movl  $1, %eax
-    int   $0x80
+    call cExit
+  
   # END NEGOTIATE FUNCTION
   
   # BEGIN CSEND FUNCTION
@@ -531,6 +540,7 @@
 #       returns: nothing
 #
   cExit: 
+    call atexit
     # Syscall exit(0);
     movl  $1, %eax
     movl  $0, %ebx
