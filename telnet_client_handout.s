@@ -420,13 +420,42 @@
         # - if command string
         if_command_string:
           movl $readBuffer, %eax
-          cmpb CMD, (%eax)       
-          jne if_not_command_string
+          movb (%eax), %al
+          cmpb CMD, %al       
+          # if buf[0] != CMD
+          jne if_ordinary_data
+          # if buf[0] == CMD
+          # recv(sockfd, buf+1, 2, 0)
+          pushl $2
+          pushl 1(%eax)
+          pushl $sockfd
+          call cReadFd
+        
+          cmpl $0, %eax
+          # if len > 0
+          jl call_negotiate
+          # if len == 0
+          je connection_closed
+          # if len < 0
+          pushl $1
+          call cExitArg
 
-
+          call_negotiate:
+            pushl $3
+            pushl $readBuffer
+            pushl $sockfd
+            call negotiate
+            jmp network_read_write_loop
 
         # - if ordinary data
-  
+        if_ordinary_data:
+          movl $readBuffer, %eax
+          incb %eax
+          movl $0x0, (%eax)
+          call cWriteStdout
+          
+
+
   # BEGIN NEGOTIATE FUNCTION
   # Added by WK
   # negotiate(int sock, unsigned char* buf, int len);
