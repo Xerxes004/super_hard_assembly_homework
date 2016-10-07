@@ -44,6 +44,11 @@
 #####################################################################
 
 .data
+    gotHere:
+      .asciz "got here\n\r"
+    gotHereEnd:
+      .equ gotHereLen, gotHereEnd - gotHere
+
     msgDisconnect:
       .asciz "Connection closed by the remote end\n\r"
     msgDisconnectEnd:
@@ -338,7 +343,7 @@
     
     # Call atexit when cExit is calledk
     movl $terminal_reset, atexit
- 
+
     jmp network_read_write_loop
 
   network_read_write_loop:
@@ -357,7 +362,7 @@
 
     # Check the return value of select for errors
     cmpl  $0,%eax
-    jg    check_read_file_descriptors
+    jge   check_read_file_descriptors
 
     # Otherwise, print error calling select and quit
     pushl $msgErrorSelect
@@ -1016,4 +1021,13 @@ cReadFd:
   premature_exit: 
     movl  %ebp, %esp
     popl  %ebp
+    ret
+
+  debug_msg:
+    pushl %ebp
+    movl %esp, %ebp
+    pushl $gotHere
+    pushl $gotHereLen
+    call cWriteString
+    addl $4, %esp
     ret
