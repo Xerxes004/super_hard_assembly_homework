@@ -332,7 +332,6 @@
     pushl $msgConnectedLen
     call  cWriteString
     addl  $8, %esp
-
     jmp setup_terminal_for_raw_io
 
   # Added by WK
@@ -344,22 +343,40 @@
     # Call atexit when cExit is calledk
     movl $terminal_reset, atexit
 
+    # ts.tv_sec = 1
+    # ts.tv_usec = 0
+    movl $ts, %eax
+    movl $1, (%eax)
+    movl $0, 4(%eax)
+
     jmp network_read_write_loop
 
   network_read_write_loop:
     # Head of infinite loop to read and write the socket 
     # while (1) {
+    
+    # FD_ZERO(&fds)
+    movl $fdSetValues, %eax
+    movl $0x00, (%eax)
+    movl $0x00, 4(%eax)
+
+    movl sockfd, %ebx
+    cmpl $0, %ebx
+    je network_select
+    orl $1, sockfd(%eax)
+    network_select:
+    orl $1, (%eax)
 
     # Syscall select(sock + 1, &fds, (fd_set *) 0, (fd_set *) 0, &ts);
     movl  $142, %eax
     movl  sockfd, %ebx
-    incl  %ebx
+    incl  (%ebx)
     movl  $fdSetValues, %ecx
     movl  $0, %edx
     movl  $0, %esi
-    movl  $0, %edi
+    movl  $ts, %edi
     int   $0x80
-
+    
     # Check the return value of select for errors
     cmpl  $0,%eax
     jge   check_read_file_descriptors
@@ -373,6 +390,7 @@
 
   check_read_file_descriptors:
     # if (nready != 0)
+    cmpl $0, %eax
     jne check_socket_file_descriptor
     # if (nready == 0) {
     # ts.tv_sec = 1
@@ -380,31 +398,34 @@
     movl $ts, %eax
     movl $1,  (%eax)
     movl $0,  4(%eax)
-    jmp network_read_write_loop 
+    
+    jmp network_read_write_loop
 
-
-    check_socket_file_descriptor: 
+    check_socket_file_descriptor:
       # else if (sock !=0 && FD_ISSET ...)) {
-        cmpl $0, sockfd
-        # if sock == 0
-        je check_stdin_file_descriptor
-        # FD_ISSET(sockfd, &fds)
-        movl $fdSetValues, %edi
-        movl $sockfd, %esi
-        andl %esi, (%edi)
-        cmpl %esi, (%edi)
-        # if !FD_ISSET...
-        jne check_stdin_file_descriptor
+      cmpl $0, sockfd
+      # if sock == 0
+      je check_stdin_file_descriptor
+      
+      # FD_ISSET(sockfd, &fds)
+      movl $fdSetValues, %edi
+      movl $sockfd, %esi
+      andl %esi, (%edi)
+      cmpl %esi, (%edi)
+      # if !FD_ISSET...
+      jne check_stdin_file_descriptor
         
-        # handle socket communication
-        # recv(sockfd, buf, 1, 0)
-        pushl $1
-        pushl $readBuffer
-        pushl $sockfd
-        call cReadFd
-        cmpl $0, %eax
-        jl if_command_string
-        je connection_closed
+      # handle socket communication
+      # recv(sockfd, buf, 1, 0)
+      pushl $1
+      pushl $readBuffer
+      pushl $sockfd
+      call cReadFd
+      #addl $12, %esp
+
+      cmpl $0, %eax
+      jl if_command_string
+      je connection_closed
         
         # - if error
         pushl $1
@@ -594,8 +615,8 @@
     andl $0x1, (%edi)
     cmpl $0x1, (%edi)
     # if !FD_ISSET...
-    jne network_read_write_loop
     
+    jne network_read_write_loop
     # if FD_ISSET...
     pushl $1
     pushl $readBuffer
@@ -1029,5 +1050,6 @@ cReadFd:
     pushl $gotHere
     pushl $gotHereLen
     call cWriteString
-    addl $4, %esp
+    movl %ebp, %esp
+    popl %ebp
     ret
