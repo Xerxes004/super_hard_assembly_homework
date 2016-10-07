@@ -423,21 +423,19 @@
     jmp network_read_write_loop
 
     check_socket_file_descriptor:
-      call debug_msg
       # else if (sock !=0 && FD_ISSET ...)) {
       cmpl $0, sockfd
       # if sock == 0
       je check_stdin_file_descriptor
-      
       # FD_ISSET(sockfd, &fds)
       movl $fdSetValues, %edi
-      addl $4, %edi
+      incl %edi
       # %edi = fd_array[sockfd]
       addl sockfd, %edi
       cmpl $1, (%edi)
       # if !FD_ISSET...
       jne check_stdin_file_descriptor
-      
+
       # handle socket communication
       # recv(sockfd, buf, 1, 0)
       pushl $1
@@ -635,12 +633,11 @@
     # TODO: read commands from stdin and write to socket
     # FD_ISSET(sockfd, &fds)
     movl $fdSetValues, %edi
-    addl $4, %edi
-    cmpl $1, (%edi)
+    cmpl $0, 4(%edi)
 
     # if !FD_ISSET(0, ...
-    jne network_read_write_loop
-    
+    #call debug_msg
+    je network_read_write_loop
     # if FD_ISSET(0, ...
     pushl $1
     pushl $readBuffer
