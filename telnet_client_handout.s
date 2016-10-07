@@ -358,8 +358,6 @@
     movl $fdSetValuesLen, %ecx
     movl $0, %ebx
 
-    call debug_msg
- 
     # FD_ZERO(&fds)
     fd_zero_loop:
       movl $0, fdSetValues(%ebx)
@@ -367,19 +365,12 @@
       cmpl %ebx, %ecx
       jl fd_zero_loop
 
-    # TODO: REMOVE
-    call debug_msg
-
     movl $fdSetValues, %ebx
     movl sockfd, %eax
     cmpl $0, %eax
     # jump past FD_SET(sock, &fds) if sock!=0
     jne network_select
   
-    #TODO: REMOVE
-    call debug_msg    
-
-
     # fd_count++
     incl (%ebx)
     # %ebx = fd_array[0]
@@ -392,13 +383,14 @@
       movl $fdSetValues, %ebx
       # fd_count++
       incl (%ebx)
+      incl %ebx
       # fd_array[0] = 1
-      movl $1, 4(%ebx)
-
+      movl $1, %ebx
+      
     # Syscall select(sock + 1, &fds, (fd_set *) 0, (fd_set *) 0, &ts);
     movl  $142, %eax
     movl  sockfd, %ebx
-    incl  (%ebx)
+    incl  %ebx
     movl  $fdSetValues, %ecx
     movl  $0, %edx
     movl  $0, %esi
