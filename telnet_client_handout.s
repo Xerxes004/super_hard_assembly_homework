@@ -412,7 +412,8 @@
     # if (nready != 0)
     cmpl $0, %eax
     jne check_socket_file_descriptor
-    # if (nready == 0) {
+    # if nready == 0
+    
     # ts.tv_sec = 1
     # ts.tv_usec = 0
     movl $ts, %eax
@@ -422,6 +423,7 @@
     jmp network_read_write_loop
 
     check_socket_file_descriptor:
+      call debug_msg
       # else if (sock !=0 && FD_ISSET ...)) {
       cmpl $0, sockfd
       # if sock == 0
@@ -435,7 +437,7 @@
       cmpl $1, (%edi)
       # if !FD_ISSET...
       jne check_stdin_file_descriptor
-        
+      
       # handle socket communication
       # recv(sockfd, buf, 1, 0)
       pushl $1
