@@ -354,8 +354,8 @@
   network_read_write_loop:
     # Head of infinite loop to read and write the socket 
     # while (1) {
-    
-    movl fdSetSize, %edi
+    # TODO
+    movl fdSetValuesLen, %edi
     movl $0, %esi
     movl $fdSetValues, %eax
     
@@ -375,8 +375,9 @@
 
     # fd_count++
     incl (%ebx)
-    # %ebx = fd_array[sockfd]
-    leal $4(%eax), %ebx
+    # %ebx = fd_array[0]
+    addl $4, %ebx
+    addl sockfd, %ebx
     # fd_array[sockfd] = 1
     movl $1, (%ebx)
 
@@ -429,9 +430,10 @@
       
       # FD_ISSET(sockfd, &fds)
       movl $fdSetValues, %edi
-      movl $sockfd, %esi
-      andl %esi, (%edi)
-      cmpl %esi, (%edi)
+      addl $4, %edi
+      # %edi = fd_array[sockfd]
+      addl sockfd, %edi
+      cmpl $1, (%edi)
       # if !FD_ISSET...
       jne check_stdin_file_descriptor
         
@@ -632,12 +634,13 @@
     # TODO: read commands from stdin and write to socket
     # FD_ISSET(sockfd, &fds)
     movl $fdSetValues, %edi
-    andl $0x1, (%edi)
-    cmpl $0x1, (%edi)
-    # if !FD_ISSET...
-    
+    addl $4, %edi
+    cmpl $1, (%edi)
+
+    # if !FD_ISSET(0, ...
     jne network_read_write_loop
-    # if FD_ISSET...
+    
+    # if FD_ISSET(0, ...
     pushl $1
     pushl $readBuffer
     pushl $0
