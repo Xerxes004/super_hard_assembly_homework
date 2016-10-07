@@ -44,6 +44,11 @@
 #####################################################################
 
 .data
+    msgDisconnect:
+      .asciz "Connection closed by the remote end\n\r"
+    msgDisconnectEnd:
+      .equ msgDisconnectLen, msgDisconnectEnd - msgDisconnect
+
     msgInvalidArguments:
         .asciz "Invalid IP address or port supplied.\n"
     msgIAEnd:
@@ -378,12 +383,40 @@
 
 
     check_socket_file_descriptor: 
-    # else if (sock !=0 && FD_ISSET ...)) {
-    # TODO: handle socket communication
-    # - if error
-    # - if disconnect
-    # - if command string
-    # - if ordinary data
+      # else if (sock !=0 && FD_ISSET ...)) {
+        cmpl $0, sockfd
+        # if sock == 0
+        je check_stdin_file_descriptor
+        # FD_ISSET(sockfd, &fds)
+        movl $fdSetValues, %edi
+        movl $sockfd, %esi
+        andl %esi, (%edi)
+        cmpl %esi, (%edi)
+        # if !FD_ISSET...
+        jne check_stdin_file_descriptor
+        
+        # handle socket communication
+        # recv(sockfd, buf, 1, 0)
+        pushl $1
+        pushl $readBuffer
+        pushl $sockfd
+        call cReadFd
+        cmpl $0, %eax
+        jl if_command_string
+        pushl $1
+        call cExitArg
+        jne if_command_string
+        pushl $msgDisconnect
+        pushl $msgDisconnectLen
+        call cWriteString
+        pushl $0
+        call cExitArg
+
+        # - if error
+        # - if disconnect
+        # - if command string
+        if_command_string:
+        # - if ordinary data
   
   # BEGIN NEGOTIATE FUNCTION
   # Added by WK
@@ -547,6 +580,16 @@
     int   $0x80
     ret
 
+
+# cExit with an argument for a return value
+cExitArg:
+  call atexit
+  movl  $1, %eax
+  movl  4(%esp), %ebx
+  int   $0x80
+  ret 
+
+ 
 #
 # cReadStdin
 #   Reads from stdin into readBuffer.
@@ -564,6 +607,22 @@
 
     movl  %eax, readBufferLen
     ret
+
+# cReadFd
+cReadFd:
+  pushl %ebp
+  movl %esp, %ebp
+  
+  # syscall read(fd, buf, len)
+  movl $3, %eax
+  movl 8(%ebp), %ebx
+  movl 12(%ebp), %ecx
+  movl 16(%ebp), %edx
+  int $0x80
+
+  movl %ebp, %esp
+  pop %ebp
+  ret
 
 #
 # cReadSocket
