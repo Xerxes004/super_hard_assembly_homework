@@ -356,16 +356,35 @@
     # while (1) {
     
     # FD_ZERO(&fds)
-    movl $fdSetValues, %eax
-    movl $0x00, (%eax)
-    movl $0x00, 4(%eax)
+    movl fdSetSize, %edi
+    movl $0, %esi
+    fd_zero_loop:
+      movl $fdSetValues, %eax
+      movl $0x00, (%eax)
+      incl %eax
+      incl %esi
+      cmpl %edi, %esi
+      jg fd_zero_loop
 
-    movl sockfd, %ebx
-    cmpl $0, %ebx
-    je network_select
-    orl $1, sockfd(%eax)
+    movl fdSetValues, %ebx
+    movl sockfd, %eax
+    cmpl $0, %eax
+    # jump past FD_SET(sock, &fds) if sock!=0
+    jne network_select
+
+    # count++
+    incl (%ebx)
+    # %ebx = fd_array[sockfd]
+    leal $4(%eax), %ebx
+    # fd_array[sockfd] = 1
+    movl $1, (%ebx)
+
     network_select:
-    orl $1, (%eax)
+      movl fdSetValues, %ebx
+      # count++
+      incl (%ebx)
+      # fd_array[0] = 1
+      movl $1, 4(%ebx)
 
     # Syscall select(sock + 1, &fds, (fd_set *) 0, (fd_set *) 0, &ts);
     movl  $142, %eax
