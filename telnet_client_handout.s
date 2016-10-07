@@ -157,10 +157,6 @@
     .lcomm serverSockaddr,     16         # i.e., 2+2+4+8  -- see above structs
     .equ   serverSockaddrLen,  16
 
-    # TODO:
-    # termios structure that needs to be filled in for the terminal_*
-    # functions.
-    # 
     # Read buffer for reading from stdin and the socket
     .lcomm readBuffer,       1024
     .lcomm readBufferLen,       4
@@ -450,10 +446,10 @@
         # - if ordinary data
         if_ordinary_data:
           movl $readBuffer, %eax
-          incb %eax
+          incl %eax
           movl $0x0, (%eax)
           call cWriteStdout
-          
+          jmp network_read_write_loop      
 
 
   # BEGIN NEGOTIATE FUNCTION
@@ -588,6 +584,38 @@
   check_stdin_file_descriptor: 
     # if (FD_ISSET (0, ...)) {
     # TODO: read commands from stdin and write to socket
+    # FD_ISSET(sockfd, &fds)
+    movl $fdSetValues, %edi
+    andl $0x1, (%edi)
+    cmpl $0x1, (%edi)
+    # if !FD_ISSET...
+    jne network_read_write_loop
+    
+    # if FD_ISSET...
+    pushl $1
+    pushl $readBuffer
+    pushl $0
+    call cReadFd
+    call cWriteSocket
+    cmpl $0, %eax
+    # if send > 0
+    jl force_lf
+    # if send < 0
+    pushl $1
+    call cExitArg
+
+    force_lf:
+      movl $readBuffer, %eax
+      cmpb $0x0a, (%eax)
+      jne network_read_write_loop
+
+      movl $0x0d, (%eax)
+      movl $0x00, 1(%eax)
+      
+      pushl $1
+      pushl %eax
+      call cWriteString
+      jmp network_read_write_loop
 
   check_socket_file_descriptor_done: 
     # Loop back to the select() system call to check for more data
