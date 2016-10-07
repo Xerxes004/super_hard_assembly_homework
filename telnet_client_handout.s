@@ -403,19 +403,28 @@
         call cReadFd
         cmpl $0, %eax
         jl if_command_string
+        je connection_closed
+        
+        # - if error
         pushl $1
         call cExitArg
-        jne if_command_string
-        pushl $msgDisconnect
-        pushl $msgDisconnectLen
-        call cWriteString
-        pushl $0
-        call cExitArg
-
-        # - if error
+        
         # - if disconnect
+        connection_closed:
+          pushl $msgDisconnect
+          pushl $msgDisconnectLen
+          call cWriteString
+          pushl $0
+          call cExitArg
+
         # - if command string
         if_command_string:
+          movl $readBuffer, %eax
+          cmpb CMD, (%eax)       
+          jne if_not_command_string
+
+
+
         # - if ordinary data
   
   # BEGIN NEGOTIATE FUNCTION
