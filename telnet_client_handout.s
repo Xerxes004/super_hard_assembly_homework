@@ -355,23 +355,30 @@
     # Head of infinite loop to read and write the socket 
     # while (1) {
     # TODO
-    movl fdSetValuesLen, %edi
-    movl $0, %esi
-    movl $fdSetValues, %eax
-    
+    movl $fdSetValuesLen, %ecx
+    movl $0, %ebx
+
+    call debug_msg
+ 
     # FD_ZERO(&fds)
     fd_zero_loop:
-      movl $0x00, (%eax)
-      incl %eax
-      incl %esi
-      cmpl %edi, %esi
-      jg fd_zero_loop
+      movl $0, fdSetValues(%ebx)
+      incl %ebx
+      cmpl %ebx, %ecx
+      jl fd_zero_loop
+
+    # TODO: REMOVE
+    call debug_msg
 
     movl $fdSetValues, %ebx
     movl sockfd, %eax
     cmpl $0, %eax
     # jump past FD_SET(sock, &fds) if sock!=0
     jne network_select
+  
+    #TODO: REMOVE
+    call debug_msg    
+
 
     # fd_count++
     incl (%ebx)
