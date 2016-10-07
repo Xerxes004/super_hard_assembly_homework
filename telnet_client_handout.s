@@ -355,24 +355,25 @@
     # Head of infinite loop to read and write the socket 
     # while (1) {
     
-    # FD_ZERO(&fds)
     movl fdSetSize, %edi
     movl $0, %esi
+    movl $fdSetValues, %eax
+    
+    # FD_ZERO(&fds)
     fd_zero_loop:
-      movl $fdSetValues, %eax
       movl $0x00, (%eax)
       incl %eax
       incl %esi
       cmpl %edi, %esi
       jg fd_zero_loop
 
-    movl fdSetValues, %ebx
+    movl $fdSetValues, %ebx
     movl sockfd, %eax
     cmpl $0, %eax
     # jump past FD_SET(sock, &fds) if sock!=0
     jne network_select
 
-    # count++
+    # fd_count++
     incl (%ebx)
     # %ebx = fd_array[sockfd]
     leal $4(%eax), %ebx
@@ -380,8 +381,8 @@
     movl $1, (%ebx)
 
     network_select:
-      movl fdSetValues, %ebx
-      # count++
+      movl $fdSetValues, %ebx
+      # fd_count++
       incl (%ebx)
       # fd_array[0] = 1
       movl $1, 4(%ebx)
