@@ -354,13 +354,12 @@
   network_read_write_loop:
     # Head of infinite loop to read and write the socket 
     # while (1) {
-    # TODO
     movl $fdSetValuesLen, %ecx
     movl $0, %ebx
 
     # FD_ZERO(&fds)
     fd_zero_loop:
-      movl $0, fdSetValues(%ebx)
+      movb $0, fdSetValues(%ebx)
       incl %ebx
       cmpl %ebx, %ecx
       jl fd_zero_loop
@@ -368,24 +367,25 @@
     movl $fdSetValues, %ebx
     movl sockfd, %eax
     cmpl $0, %eax
-    # jump past FD_SET(sock, &fds) if sock!=0
+    # jump past FD_SET(sock, &fds) if sock==0
     jne network_select
   
     # fd_count++
-    incl (%ebx)
+    addl $1, (%ebx)
     # %ebx = fd_array[0]
     addl $4, %ebx
+    # %ebx = fd_array[sockfd]
     addl sockfd, %ebx
     # fd_array[sockfd] = 1
     movl $1, (%ebx)
 
-    network_select:
-      movl $fdSetValues, %ebx
-      # fd_count++
-      incl (%ebx)
-      incl %ebx
-      # fd_array[0] = 1
-      movl $1, %ebx
+  network_select:
+    movl $fdSetValues, %ebx
+    # fd_count++
+    addl $1, (%ebx)
+    addl $4, %ebx
+    # fd_array[0] = 1
+    movl $1, (%ebx)
       
     # Syscall select(sock + 1, &fds, (fd_set *) 0, (fd_set *) 0, &ts);
     movl  $142, %eax
@@ -398,7 +398,7 @@
     int   $0x80
     
     # Check the return value of select for errors
-    cmpl  $0,%eax
+    cmpl  $0, %eax
     jge   check_read_file_descriptors
 
     # Otherwise, print error calling select and quit
@@ -427,6 +427,7 @@
       cmpl $0, sockfd
       # if sock == 0
       je check_stdin_file_descriptor
+      
       # FD_ISSET(sockfd, &fds)
       movl $fdSetValues, %edi
       incl %edi
@@ -435,15 +436,16 @@
       cmpl $1, (%edi)
       # if !FD_ISSET...
       jne check_stdin_file_descriptor
-
+      
+      # TODO
       # handle socket communication
       # recv(sockfd, buf, 1, 0)
       pushl $1
       pushl $readBuffer
-      pushl $sockfd
-      call cReadFd
-      #addl $12, %esp
-
+      pushl sockfd
+      call  cReadFd
+      addl  $12, %esp
+      
       cmpl $0, %eax
       jl if_command_string
       je connection_closed
@@ -467,12 +469,14 @@
           cmpb CMD, %al       
           # if buf[0] != CMD
           jne if_ordinary_data
+          
           # if buf[0] == CMD
           # recv(sockfd, buf+1, 2, 0)
           pushl $2
           pushl 1(%eax)
           pushl $sockfd
           call cReadFd
+          addl $12, %esp
         
           cmpl $0, %eax
           # if len > 0
@@ -488,14 +492,17 @@
             pushl $readBuffer
             pushl $sockfd
             call negotiate
+            addl $12, %esp
             jmp network_read_write_loop
 
         # - if ordinary data
         if_ordinary_data:
+          
+          call debug_msg
           movl $readBuffer, %eax
-          incl %eax
-          movl $0x0, (%eax)
+          movb $'\0', 1(%eax)
           call cWriteStdout
+
           jmp network_read_write_loop      
 
 
@@ -636,7 +643,6 @@
     cmpl $0, 4(%edi)
 
     # if !FD_ISSET(0, ...
-    #call debug_msg
     je network_read_write_loop
     # if FD_ISSET(0, ...
     pushl $1
@@ -686,7 +692,7 @@
 #       returns: nothing
 #
   cExit: 
-    call atexit
+    #call atexit
     # Syscall exit(0);
     movl  $1, %eax
     movl  $0, %ebx
@@ -696,7 +702,7 @@
 
 # cExit with an argument for a return value
 cExitArg:
-  call atexit
+  #call atexit
   movl  $1, %eax
   movl  4(%esp), %ebx
   int   $0x80
@@ -768,6 +774,7 @@ cReadFd:
     movl  $readBuffer, %ecx
     movl  readBufferLen, %edx
     int   $0x80
+    
     ret
 
 #
