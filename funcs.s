@@ -57,10 +57,31 @@ cFD_ISSET:
 	.cfi_offset 5, -8
 	movl	%esp, %ebp
 	.cfi_def_cfa_register 5
+	pushl	%ebx
+	.cfi_offset 3, -12
 	movl	8(%ebp), %eax
 	leal	31(%eax), %edx
 	testl	%eax, %eax
 	cmovs	%edx, %eax
+	sarl	$5, %eax
+	movl	%eax, %edx
+	movl	12(%ebp), %eax
+	movl	(%eax,%edx,4), %ebx
+	movl	8(%ebp), %eax
+	cltd
+	shrl	$27, %edx
+	addl	%edx, %eax
+	andl	$31, %eax
+	subl	%edx, %eax
+	movl	%eax, %ecx
+	sarl	%cl, %ebx
+	movl	%ebx, %eax
+	andl	$1, %eax
+	testl	%eax, %eax
+	setne	%al
+	movzbl	%al, %eax
+	popl	%ebx
+	.cfi_restore 3
 	popl	%ebp
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4
@@ -123,12 +144,12 @@ negotiate:
 	addl	$1, %eax
 	movzbl	(%eax), %eax
 	cmpb	$-3, %al
-	jne	.L5
+	jne	.L6
 	movl	-44(%ebp), %eax
 	addl	$2, %eax
 	movzbl	(%eax), %eax
 	cmpb	$31, %al
-	jne	.L5
+	jne	.L6
 	movb	$-1, -31(%ebp)
 	movb	$-5, -30(%ebp)
 	movb	$31, -29(%ebp)
@@ -140,10 +161,10 @@ negotiate:
 	movl	%eax, (%esp)
 	call	send
 	testl	%eax, %eax
-	jns	.L6
+	jns	.L7
 	movl	$1, (%esp)
 	call	exit
-.L6:
+.L7:
 	movb	$-1, -21(%ebp)
 	movb	$-6, -20(%ebp)
 	movb	$31, -19(%ebp)
@@ -161,44 +182,44 @@ negotiate:
 	movl	%eax, (%esp)
 	call	send
 	testl	%eax, %eax
-	jns	.L7
+	jns	.L8
 	movl	$1, (%esp)
 	call	exit
-.L7:
+.L8:
 	nop
-	jmp	.L4
-.L5:
+	jmp	.L5
+.L6:
 	movl	$0, -28(%ebp)
-	jmp	.L9
-.L12:
+	jmp	.L10
+.L13:
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movzbl	(%eax), %eax
 	cmpb	$-3, %al
-	jne	.L10
+	jne	.L11
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movb	$-4, (%eax)
-	jmp	.L11
-.L10:
+	jmp	.L12
+.L11:
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movzbl	(%eax), %eax
 	cmpb	$-5, %al
-	jne	.L11
+	jne	.L12
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movb	$-3, (%eax)
-.L11:
+.L12:
 	addl	$1, -28(%ebp)
-.L9:
+.L10:
 	movl	-28(%ebp), %eax
 	cmpl	16(%ebp), %eax
-	jl	.L12
+	jl	.L13
 	movl	16(%ebp), %eax
 	movl	$0, 12(%esp)
 	movl	%eax, 8(%esp)
@@ -208,15 +229,15 @@ negotiate:
 	movl	%eax, (%esp)
 	call	send
 	testl	%eax, %eax
-	jns	.L4
+	jns	.L5
 	movl	$1, (%esp)
 	call	exit
-.L4:
+.L5:
 	movl	-12(%ebp), %eax
 	xorl	%gs:20, %eax
-	je	.L13
+	je	.L14
 	call	__stack_chk_fail
-.L13:
+.L14:
 	leave
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4

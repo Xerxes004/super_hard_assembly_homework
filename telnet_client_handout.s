@@ -169,6 +169,11 @@
 
     .lcomm atexit, 4
 
+
+		# struct timeval {
+		#		int tv_sec;
+		# 	int tv_usec;
+		# }
     .lcomm ts, 8
 #####################################################################
 
@@ -395,6 +400,7 @@
 
 
   network_select:
+		# FD_SET(0, &fds)
 		pushl $fdSetValues
 		pushl $0
 		call cFD_SET
@@ -426,7 +432,8 @@
     jns   check_read_file_descriptors
 
     # Otherwise, print error calling select and quit
-    pushl $msgErrorSelect
+    
+		pushl $msgErrorSelect
     pushl $msgErrorSelectLen
     call  cWriteString
     addl  $8, %esp
@@ -458,7 +465,7 @@
 			pushl sockfd
 			call cFD_ISSET
 			addl $8, %esp
-			cmpl $3, %eax      
+			cmpl $1, %eax      
 
 	# DOESN'T WORK
 			jmp skip3

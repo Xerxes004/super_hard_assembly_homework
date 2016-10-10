@@ -43,8 +43,8 @@ void cFD_SET(int sockfd, fd_set* set) {
 	FD_SET(sockfd, set);
 }
 
-void cFD_ISSET(int sockfd, fd_set* set) {
-	FD_ISSET(sockfd, set);
+int cFD_ISSET(int sockfd, fd_set* set) {
+	return FD_ISSET(sockfd, set);
 }
 
 void cFD_ZERO(fd_set* set) {
