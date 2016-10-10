@@ -2,7 +2,8 @@ all: telnet_client
 
 telnet_client: telnet_client_handout.s 
 #	gcc -nostartfiles -m32 -nostdlib -gstabs -o telnet_client telnet_client_handout.s term.s
-	gcc -nostartfiles -m32 -gstabs -o telnet_client telnet_client_handout.s term.s funcs.s -lc
+	gcc -m32 -nostartfiles -lc -c funcs.c
+	gcc -nostartfiles -m32 -gstabs -o telnet_client telnet_client_handout.s term.s funcs.o -lc
 
 
 clean:

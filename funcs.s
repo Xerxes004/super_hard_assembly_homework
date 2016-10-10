@@ -124,9 +124,9 @@ cFD_ZERO:
 	.cfi_endproc
 .LFE4:
 	.size	cFD_ZERO, .-cFD_ZERO
-	.globl	negotiate
-	.type	negotiate, @function
-negotiate:
+	.globl	cnegotiate
+	.type	cnegotiate, @function
+cnegotiate:
 .LFB5:
 	.cfi_startproc
 	pushl	%ebp
@@ -244,7 +244,7 @@ negotiate:
 	ret
 	.cfi_endproc
 .LFE5:
-	.size	negotiate, .-negotiate
+	.size	cnegotiate, .-cnegotiate
 	.local	tin
 	.comm	tin,60,32
 	.type	terminal_set, @function

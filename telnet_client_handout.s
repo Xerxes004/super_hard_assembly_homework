@@ -480,7 +480,7 @@
       cmpl $1, (%edi)
 			skip3:
 	# END DOESN'T WORK
-
+			# TODO: CHECK TO SEE IF WE EVER GET PAST THIS
       # if !FD_ISSET...
       jne check_stdin_file_descriptor
       
@@ -536,8 +536,8 @@
           call_negotiate:
             pushl $3
             pushl $readBuffer
-            pushl $sockfd
-            call negotiate
+            pushl sockfd
+            call cnegotiate
             addl $12, %esp
             jmp network_read_write_loop
 
@@ -567,7 +567,7 @@
     movb 1(%esi), %al
     cmpb DO, %al
     jne begin_negotiate_loop 
-    
+   
     # &&
     
     # if buf[2] == CMD_WINDOW_SIZE

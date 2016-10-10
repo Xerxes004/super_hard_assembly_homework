@@ -51,9 +51,9 @@ void cFD_ZERO(fd_set* set) {
 	FD_ZERO(set);
 }
 
-void negotiate(int sock, unsigned char *buf, int len) {
+void cnegotiate(int sock, unsigned char *buf, int len) {
      
-	 /* communicate to the remote application the local terminal's window size */
+	 // communicate to the remote application the local terminal's window size
     if (buf[1] == DO && buf[2] == CMD_WINDOW_SIZE) {
         unsigned char tmp1[] = {CMD, WILL, CMD_WINDOW_SIZE};
         if (send(sock, tmp1, 3 , 0) < 0)
@@ -66,8 +66,8 @@ void negotiate(int sock, unsigned char *buf, int len) {
         return;
     }
      
-	 /* appears to be replying to the remote app, that this app WONT
-       accept commands, but WILL respond to requests.               */
+	  //  appears to be replying to the remote app, that this app WONT
+    // accept commands, but WILL respond to requests.
     int i;
     for (i = 0; i < len; i++) {
         if (buf[i] == DO)
@@ -76,7 +76,7 @@ void negotiate(int sock, unsigned char *buf, int len) {
             buf[i] = DO;
     }
  
-	 /* send that feedback */
+	  // send that feedback
     if (send(sock, buf, len , 0) < 0)
         exit(1);
 }
