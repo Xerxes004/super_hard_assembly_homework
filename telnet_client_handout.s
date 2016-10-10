@@ -685,10 +685,10 @@
     # FD_ISSET(sockfd, &fds)
 
 		pushl $fdSetValues
-		pushl sockfd
+		pushl $0
 		call cFD_ISSET
 		addl $8, %esp
-		cmpl $0, %eax
+		cmpl $1, %eax
 
 	# DOESN'T WORK
 		jmp skip4
@@ -700,16 +700,16 @@
     # if !FD_ISSET(0, ...
     jne network_read_write_loop
     # if FD_ISSET(0, ...
-    pushl $1
-    pushl $readBuffer
-    pushl $0
-    call cReadFd
-    addl $12, %esp
+    # pushl $1
+   # pushl $readBuffer
+   # pushl $0
+    call cReadStdin
+   # addl $12, %esp
 
 		call cWriteSocket
     cmpl $0, %eax
-    # if send > 0
-    jl force_lf
+    # if send >= 0
+    jge force_lf
     # if send < 0
     pushl $1
     call cExitArg
