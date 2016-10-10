@@ -167,14 +167,12 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
-    .lcomm atexit, 4
-
-
 		# struct timeval {
 		#		int tv_sec;
 		# 	int tv_usec;
 		# }
     .lcomm ts, 8
+
 #####################################################################
 
 .text
@@ -343,9 +341,9 @@
   setup_terminal_for_raw_io:
     # Set up terminal for raw I/O
     # Call terminal_set() with no args
-    call terminal_set
-  
-    # ts.tv_sec = 1
+    call cterminal_set
+    
+		# ts.tv_sec = 1
     # ts.tv_usec = 0
     movl $ts, %eax
     movl $1, (%eax)
@@ -512,7 +510,7 @@
         if_command_string:
           movl $readBuffer, %eax
           movb (%eax), %al
-          cmpb CMD, %al       
+          cmpb $0xff, %al       
           # if buf[0] != CMD
           jne if_ordinary_data
           
@@ -537,9 +535,9 @@
             pushl $3
             pushl $readBuffer
             pushl sockfd
-            call cnegotiate
-            addl $12, %esp
-            jmp network_read_write_loop
+            call 	negotiate
+            addl 	$12, %esp
+            jmp 	network_read_write_loop
 
         # - if ordinary data
         if_ordinary_data: 
@@ -561,62 +559,62 @@
     movl  %esp, %ebp
     
     # Put pointer to buf in %esi
-    movl 8(%esp), %esi
+    movl 12(%esp), %esi
     
     # if buf[1] == DO
     movb 1(%esi), %al
-    cmpb DO, %al
+    cmpb $0xff, %al
     jne begin_negotiate_loop 
    
     # &&
     
     # if buf[2] == CMD_WINDOW_SIZE
     movb 2(%esi), %al
-    cmpb CMD_WINDOW_SIZE, %al
+    cmpb $31, %al
     jne begin_negotiate_loop
 
     # enter if-statement
-    pushl $0
     pushl $3
     pushl $tmp1
-    pushl $sockfd
+    pushl 8(%esp)
     call cSend
-    
+    addl $12, %esp
+
     # if send(sockfd, tmp1, 3, 0) < 0
     cmpl  $0, %eax
     jg    negotiate_premature_exit 
 
-    pushl $0
     pushl $9
     pushl $tmp2
-    pushl $sockfd
+    pushl 8(%esp)
     call cSend
+		addl $12, %esp
 
     # if send(sockfd, tmp2, 9, 0) < 0
     cmpl  $0, %eax
     jg    negotiate_premature_exit
     
     # return inside if-statement
-    ret
-    # exit if-statement
+    jmp negotiate_return
+		# exit if-statement
    
   begin_negotiate_loop: 
     # int i = 0
     movl $0, %edx
     # reset %esi to point to buf
-    movl 8(%esp), %esi
+    movl 12(%esp), %esi
     # %ebx = len
-    movl 12(%esp), %ecx
+    movl 16(%esp), %ecx
 
   negotiate_loop:
     # Get byte out of array
     movb (%esi), %al
     # %al = buf[i]
     # if buf[i] == DO
-    cmpb DO, %al
+    cmpb $0xfd, %al
     jne negotiate_loop_else
     # buf[i] = WONT
-    movb WONT, %al
+    movb $0xfc, %al
     movb %al, (%esi)
     
   # else
@@ -624,33 +622,36 @@
     # Get byte out of array
     movb (%esi), %al
     # if buf[i] == WILL
-    cmpb WILL, %al
+    cmpb $0xfb, %al
     jne end_negotiate_loop
     # buf[i] = DO
-    movb DO, %al
+    movb $0xfd, %al
     movb %al, (%esi)
 
   end_negotiate_loop:
     # Increment i
-    inc %edx
+    addl $1, %edx
     # Increment buf
-    inc %esi
+    addl $1, %esi
     # See if i < len
     cmpl %edx, %ecx
     # if it is, loop again
     jl negotiate_loop
   
   negotiate_send_feedback:
-    pushl $0
-    pushl 4(%esp)
-    pushl 8(%esp)
+    pushl 16(%esp)
     pushl 12(%esp)
-    # send(sockfd, buf, len, 0)
+    pushl 8(%esp)
+    # send(sockfd, buf, len)
     call cSend
+		addl $12, %esp
     cmpl $0, %eax
     # if (send(sockfd, buf, len, 0) < 0)
     jg negotiate_premature_exit    
 
+	negotiate_return:
+		movl %ebp, %esp
+		popl %ebp
     # else return
     ret
 
@@ -674,7 +675,9 @@
     movl  16(%esp), %edx
     movl  $0, %esi
     int   $0x80
-
+		
+		movl %ebp, %esp
+		popl %ebp
     ret
 
   # END CSEND FUNCTION
@@ -749,7 +752,7 @@
 #       returns: nothing
 #
   cExit: 
-		call terminal_reset
+		call cterminal_reset
     # Syscall exit(0);
     movl  $1, %eax
     movl  $0, %ebx
@@ -759,7 +762,7 @@
 
 # cExit with an argument for a return value
 cExitArg:
-  #call atexit
+	call 	cterminal_reset
   movl  $1, %eax
   movl  4(%esp), %ebx
   int   $0x80

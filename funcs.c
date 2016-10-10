@@ -85,7 +85,7 @@ void cnegotiate(int sock, unsigned char *buf, int len) {
 static struct termios tin;
  
 // set the local terminal configuration to allow "raw" I/O
-static void terminal_set(void) {
+void cterminal_set(void) {
     // save terminal configuration
     tcgetattr(STDIN_FILENO, &tin);
      
@@ -101,10 +101,10 @@ static void terminal_set(void) {
 }
  
 // restore original terminal configuration upon exit
-static void terminal_reset(void) {
+void cterminal_reset(void) {
     tcsetattr(STDIN_FILENO,TCSANOW,&tin);
 }
 
-void cAtexit(void *func) {
+void catexit(void *func) {
 	atexit(func);
 }
