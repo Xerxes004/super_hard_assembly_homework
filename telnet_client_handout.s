@@ -339,11 +339,7 @@
     # Set up terminal for raw I/O
     # Call terminal_set() with no args
     call terminal_set
-   
-		pushl $terminal_reset
-		call cAtexit
-		addl $4, %esp
- 
+  
     # ts.tv_sec = 1
     # ts.tv_usec = 0
     movl $ts, %eax
@@ -460,9 +456,9 @@
 			
 			pushl $fdSetValues
 			pushl sockfd
-			call cFD_SET
+			call cFD_ISSET
 			addl $8, %esp
-			cmpl $0, %eax      
+			cmpl $3, %eax      
 
 	# DOESN'T WORK
 			jmp skip3

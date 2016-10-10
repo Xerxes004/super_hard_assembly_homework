@@ -105,6 +105,6 @@ static void terminal_reset(void) {
     tcsetattr(STDIN_FILENO,TCSANOW,&tin);
 }
 
-static void cAtexit(void *func) {
+void cAtexit(void *func) {
 	atexit(func);
 }

@@ -303,6 +303,7 @@ terminal_reset:
 	.cfi_endproc
 .LFE7:
 	.size	terminal_reset, .-terminal_reset
+	.globl	cAtexit
 	.type	cAtexit, @function
 cAtexit:
 .LFB8:
