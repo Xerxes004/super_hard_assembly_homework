@@ -32,7 +32,7 @@
 # addresses.
 #
 # You can see what is supposed to happen by running a real telnet client, e.g.,
-# telnet 64.13.139.230 23
+# telnet 69.16.139.230 23
 # 
 # Entering the above command gives you a connection to the telehack.com where
 # you can interact via sending commands and receiving data.  To terminate the
@@ -44,20 +44,10 @@
 #####################################################################
 
 .data
-    gotHere:
-      .asciz "got here\n\r"
-    gotHereEnd:
-      .equ gotHereLen, gotHereEnd - gotHere
-
-    msgDisconnect:
-      .asciz "Connection closed by the remote end\n\r"
-    msgDisconnectEnd:
-      .equ msgDisconnectLen, msgDisconnectEnd - msgDisconnect
-
     msgInvalidArguments:
-        .asciz "Invalid IP address or port supplied.\n"
+	.asciz "Invalid IP address or port supplied.\n"
     msgIAEnd:
-        .equ msgInvalidArgumentsLen, msgIAEnd - msgInvalidArguments
+      .equ msgInvalidArgumentsLen, msgIAEnd - msgInvalidArguments
 
     msgErrorSocket:
 	.asciz "Error creating socket.\n"
@@ -93,41 +83,6 @@
     socketArgs:
       .long 2,1,6
 
-    # defines
-    ESBN:
-        .byte 0xf0
-    SUBN:
-        .byte 0xfa
-    WILL:
-        .byte 0xfb
-    WONT:
-        .byte 0xfc
-    DO:
-        .byte 0xfd
-    DONT:
-        .byte 0xfe
-    CMD:
-        .byte 0xff
-    
-    TRMW:
-        .byte 80
-    TRMH:
-        .byte 24
-    
-    CMD_ECHO:
-        .byte 1
-    CMD_WINDOW_SIZE:
-        .byte 31
-    # end defines
-    
-    # Temp variables for negotiate function
-    tmp1:
-        #     CMD,  WILL, CMD_WINDOW_SIZE
-        .byte 0xff, 0xfb, 31
-    tmp2:
-        #     CMD,  SUBN, CMD_WINDOW_SIZE, 0x00, TRMW, TRMH, CMD, ESBN
-        .byte 0xff, 0xfa, 31, 0x00, 80, 24, 0xff, 0xf0
-    
 #####################################################################
 
 .bss
@@ -167,16 +122,13 @@
     .lcomm readBufferLen,       4
     .equ   readBufferMaxLen, 1024
 
-    .lcomm atexit, 4
-
-    .lcomm ts, 8
 #####################################################################
 
 .text
     .global _start
 
   _start: 
-    # Pop argc, storing the value into %eax
+    # Pop argc
     popl  %eax
 
     # Check if we have the correct number of arguments (3), for the 
@@ -205,9 +157,8 @@
     call  cStrIP_to_Octets
     addl  $4, %esp
 
-    # Check for errors. If %eax had a 0, then cStrIP_to_Octets had an error
+    # Check for errors
     cmpl  $0, %eax
-    # jl is "jump to label"
     jl    invalid_program_arguments
 
     # Next on the stack is the port
@@ -332,65 +283,13 @@
     pushl $msgConnectedLen
     call  cWriteString
     addl  $8, %esp
-    jmp setup_terminal_for_raw_io
 
-  # Added by WK
-  setup_terminal_for_raw_io:
-    # Set up terminal for raw I/O
-    # Call terminal_set() with no args
-    call terminal_set
-    
-    # ts.tv_sec = 1
-    # ts.tv_usec = 0
-    movl $ts, %eax
-    movl $1, (%eax)
-    movl $0, 4(%eax)
-
-    jmp network_read_write_loop
+    # TODO:  set up terminal for raw I/O
 
   network_read_write_loop:
     # Head of infinite loop to read and write the socket 
     # while (1) {
-		movl $0, %edx
-    movl $fdSetValuesLen, %eax
-		movl $4, %ecx
-		divl %ecx
-    movl $0, %ebx
 
-    # FD_ZERO(&fds)
-    fd_zero_loop:
-      movb $0, fdSetValues(%ebx)
-      incl %ebx
-      cmpl %ebx, %eax
-      jg fd_zero_loop
-
-    movl $fdSetValues, %ebx
-    cmpl $0, sockfd
-    
-		# jump past FD_SET(sock, &fds) if sock==0
-    je network_select
-  
-    # fd_count++
-    addl $1, (%ebx)
-    # %ebx = fd_array[0]
-    addl $4, %ebx
-    # %ebx = fd_array[sockfd]
-		movl sockfd, %eax
-		movl $0, %edx
-		movl $4, %ecx
-		mull %ecx
-    addl %eax, %ebx
-    # fd_array[sockfd] = 1
-    movl $1, (%ebx)
-
-  network_select:
-    movl $fdSetValues, %ebx
-    # fd_count++
-    addl $1, (%ebx)
-    addl $4, %ebx
-    # fd_array[0] = 1
-    movl $1, (%ebx)
-      
     # Syscall select(sock + 1, &fds, (fd_set *) 0, (fd_set *) 0, &ts);
     movl  $142, %eax
     movl  sockfd, %ebx
@@ -398,11 +297,11 @@
     movl  $fdSetValues, %ecx
     movl  $0, %edx
     movl  $0, %esi
-    movl  $ts, %edi
+    movl  $0, %edi
     int   $0x80
-    
+
     # Check the return value of select for errors
-    cmpl  $0, %eax
+    cmpl  $0,%eax
     jns   check_read_file_descriptors
 
     # Otherwise, print error calling select and quit
@@ -413,277 +312,28 @@
     jmp   network_premature_exit
 
   check_read_file_descriptors:
-    # if (nready != 0)
-    cmpl $0, %eax
-    jne check_socket_file_descriptor
-    # if nready == 0
-    
-    # ts.tv_sec = 1
-    # ts.tv_usec = 0
-    movl $ts, %eax
-    movl $1,  (%eax)
-    movl $0,  4(%eax)
-    
-    jmp network_read_write_loop
+    # if (nready == 0) {
+    # TODO: set time structure
 
-    check_socket_file_descriptor:
-      # else if (sock !=0 && FD_ISSET ...)) {
-      cmpl $0, sockfd
-      # if sock == 0
-      je check_stdin_file_descriptor
-      
-      # FD_ISSET(sockfd, &fds)
-      movl $fdSetValues, %edi
-      addl $4, %edi
-			movl $0, %edx
-			movl $4, %eax
-			movl sockfd, %ecx
-			mull %ecx
-			addl %eax, %edi
-      # %edi = fd_array[sockfd]
-      cmpl $1, (%edi)
-      # if !FD_ISSET...
-      jne check_stdin_file_descriptor
-      
-      # handle socket communication
-      # recv(sockfd, buf, 1, 0)
-      pushl $1
-      pushl $readBuffer
-      pushl sockfd
-      call  cReadFd
-      addl  $12, %esp
-      
-      cmpl $0, %eax
-      je connection_closed
-      jg if_command_string
-        
-        # - if error
-        pushl $1
-        call cExitArg
-        
-        # - if disconnect
-        connection_closed:
-          pushl $msgDisconnect
-          pushl $msgDisconnectLen
-          call cWriteString
-          pushl $0
-          call cExitArg
-
-        # - if command string
-        if_command_string:
-          movl $readBuffer, %eax
-          movb (%eax), %al
-          cmpb CMD, %al       
-          # if buf[0] != CMD
-          jne if_ordinary_data
-          
-          # if buf[0] == CMD
-          # recv(sockfd, buf+1, 2, 0)
-          pushl $2
-          pushl 1(%eax)
-          pushl sockfd
-          call cReadFd
-          addl $12, %esp
-        
-          cmpl $0, %eax
-          # if len > 0
-          jl call_negotiate
-          # if len == 0
-          je connection_closed
-          # if len < 0
-          pushl $1
-          call cExitArg
-
-          call_negotiate:
-            pushl $3
-            pushl $readBuffer
-            pushl $sockfd
-            call negotiate
-            addl $12, %esp
-            jmp network_read_write_loop
-
-        # - if ordinary data
-        if_ordinary_data: 
-          movl $readBuffer, %eax
-          movb $'\0', 1(%eax)
-					pushl $1
-					pushl $readBuffer
-          call cWriteString
-					addl $8, %esp
-
-          jmp network_read_write_loop      
-
-
-  # BEGIN NEGOTIATE FUNCTION
-  # Added by WK
-  # negotiate(int sock, unsigned char* buf, int len);
-  negotiate:
-    pushl %ebp
-    movl  %esp, %ebp
-    
-    # Put pointer to buf in %esi
-    movl 8(%esp), %esi
-    
-    # if buf[1] == DO
-    movb 1(%esi), %al
-    cmpb DO, %al
-    jne begin_negotiate_loop 
-    
-    # &&
-    
-    # if buf[2] == CMD_WINDOW_SIZE
-    movb 2(%esi), %al
-    cmpb CMD_WINDOW_SIZE, %al
-    jne begin_negotiate_loop
-
-    # enter if-statement
-    pushl $0
-    pushl $3
-    pushl $tmp1
-    pushl $sockfd
-    call cSend
-    
-    # if send(sockfd, tmp1, 3, 0) < 0
-    cmpl  $0, %eax
-    jg    negotiate_premature_exit 
-
-    pushl $0
-    pushl $9
-    pushl $tmp2
-    pushl $sockfd
-    call cSend
-
-    # if send(sockfd, tmp2, 9, 0) < 0
-    cmpl  $0, %eax
-    jg    negotiate_premature_exit
-    
-    # return inside if-statement
-    ret
-    # exit if-statement
-   
-  begin_negotiate_loop: 
-    # int i = 0
-    movl $0, %edx
-    # reset %esi to point to buf
-    movl 8(%esp), %esi
-    # %ebx = len
-    movl 12(%esp), %ecx
-
-  negotiate_loop:
-    # Get byte out of array
-    movb (%esi), %al
-    # %al = buf[i]
-    # if buf[i] == DO
-    cmpb DO, %al
-    jne negotiate_loop_else
-    # buf[i] = WONT
-    movb WONT, %al
-    movb %al, (%esi)
-    
-  # else
-  negotiate_loop_else:
-    # Get byte out of array
-    movb (%esi), %al
-    # if buf[i] == WILL
-    cmpb WILL, %al
-    jne end_negotiate_loop
-    # buf[i] = DO
-    movb DO, %al
-    movb %al, (%esi)
-
-  end_negotiate_loop:
-    # Increment i
-    inc %edx
-    # Increment buf
-    inc %esi
-    # See if i < len
-    cmpl %edx, %ecx
-    # if it is, loop again
-    jl negotiate_loop
-  
-  negotiate_send_feedback:
-    pushl $0
-    pushl 4(%esp)
-    pushl 8(%esp)
-    pushl 12(%esp)
-    # send(sockfd, buf, len, 0)
-    call cSend
-    cmpl $0, %eax
-    # if (send(sockfd, buf, len, 0) < 0)
-    jg negotiate_premature_exit    
-
-    # else return
-    ret
-
-  negotiate_premature_exit:
-    call cExit
-  
-  # END NEGOTIATE FUNCTION
-  
-  # BEGIN CSEND FUNCTION
-
-  # Wes Kelly
-  # size_t send(int sockfd, const void* buf, size_t len, int flags)
-  cSend:
-    pushl %ebp
-    movl  %esp, %ebp
-    
-    # push all registers 
-    movl  $4, %eax
-    movl  8(%esp), %ebx
-    movl  12(%esp), %ecx
-    movl  16(%esp), %edx
-    movl  $0, %esi
-    int   $0x80
-
-    ret
-
-  # END CSEND FUNCTION
+    check_socket_file_descriptor: 
+    # if (sock !=0 && FD_ISSET ...)) {
+    # TODO: handle socket communication
+    # - if error
+    # - if disconnect
+    # - if command string
+    # - if ordinary data
 
   check_stdin_file_descriptor: 
     # if (FD_ISSET (0, ...)) {
     # TODO: read commands from stdin and write to socket
-    # FD_ISSET(sockfd, &fds)
-    movl $fdSetValues, %edi
-    cmpl $1, 4(%edi)
-
-    # if !FD_ISSET(0, ...
-    jne network_read_write_loop
-    # if FD_ISSET(0, ...
-    pushl $1
-    pushl $readBuffer
-    pushl $0
-    call cReadFd
-    addl $12, %esp
-
-		call cWriteSocket
-    cmpl $0, %eax
-    # if send > 0
-    jl force_lf
-    # if send < 0
-    pushl $1
-    call cExitArg
-
-    force_lf:
-      movl $readBuffer, %eax
-      cmpb $0x0a, (%eax)
-      jne network_read_write_loop
-
-      movl $0x0d, (%eax)
-      movl $0x00, 1(%eax)
-      
-      pushl $1
-      pushl %eax
-      call cWriteString
-      jmp network_read_write_loop
 
   check_socket_file_descriptor_done: 
     # Loop back to the select() system call to check for more data
     jmp   network_read_write_loop
 
   network_premature_exit: 
-  network_close_socket:     
-		# Syscall close(sockfd);
+  network_close_socket: 
+    # Syscall close(sockfd);
     movl  $6, %eax
     movl  sockfd, %ebx
     int   $0x80
@@ -699,23 +349,12 @@
 #       returns: nothing
 #
   cExit: 
-		call terminal_reset
     # Syscall exit(0);
     movl  $1, %eax
     movl  $0, %ebx
     int   $0x80
     ret
 
-
-# cExit with an argument for a return value
-cExitArg:
-  #call atexit
-  movl  $1, %eax
-  movl  4(%esp), %ebx
-  int   $0x80
-  ret 
-
- 
 #
 # cReadStdin
 #   Reads from stdin into readBuffer.
@@ -733,22 +372,6 @@ cExitArg:
 
     movl  %eax, readBufferLen
     ret
-
-# cReadFd
-cReadFd:
-  pushl %ebp
-  movl %esp, %ebp
-  
-  # syscall read(fd, buf, len)
-  movl $3, %eax
-  movl 8(%ebp), %ebx
-  movl 12(%ebp), %ecx
-  movl 16(%ebp), %edx
-  int $0x80
-
-  movl %ebp, %esp
-  pop %ebp
-  ret
 
 #
 # cReadSocket
@@ -781,7 +404,6 @@ cReadFd:
     movl  $readBuffer, %ecx
     movl  readBufferLen, %edx
     int   $0x80
-    
     ret
 
 #
@@ -975,9 +597,7 @@ cReadFd:
     movl  %esi, %edi
 
     string_length_loop: 
-        # Load the next byte from the string.
-        # lodsb reads the byte pointed to by esi into %ala,
-        # then INCREMENTS the %esi register
+        # Load the next byte from the string
         lodsb
 
         # Compare the byte to the null byte
@@ -1077,14 +697,4 @@ cReadFd:
   premature_exit: 
     movl  %ebp, %esp
     popl  %ebp
-    ret
-
-  debug_msg:
-    pushl %ebp
-    movl %esp, %ebp
-    pushl $gotHere
-    pushl $gotHereLen
-    call cWriteString
-    movl %ebp, %esp
-    popl %ebp
     ret
