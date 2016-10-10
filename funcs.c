@@ -38,7 +38,19 @@
 
 #define CMD_ECHO 1
 #define CMD_WINDOW_SIZE 31
- 
+
+void cFD_SET(int sockfd, fd_set* set) {
+	FD_SET(sockfd, set);
+}
+
+void cFD_ISSET(int sockfd, fd_set* set) {
+	FD_ISSET(sockfd, set);
+}
+
+void cFD_ZERO(fd_set* set) {
+	FD_ZERO(set);
+}
+
 void negotiate(int sock, unsigned char *buf, int len) {
      
 	 /* communicate to the remote application the local terminal's window size */
@@ -91,4 +103,8 @@ static void terminal_set(void) {
 // restore original terminal configuration upon exit
 static void terminal_reset(void) {
     tcsetattr(STDIN_FILENO,TCSANOW,&tin);
+}
+
+static void cAtexit(void *func) {
+	atexit(func);
 }

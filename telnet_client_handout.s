@@ -339,7 +339,11 @@
     # Set up terminal for raw I/O
     # Call terminal_set() with no args
     call terminal_set
-    
+   
+		pushl $terminal_reset
+		call cAtexit
+		addl $4, %esp
+ 
     # ts.tv_sec = 1
     # ts.tv_usec = 0
     movl $ts, %eax
@@ -369,7 +373,14 @@
     
 		# jump past FD_SET(sock, &fds) if sock==0
     je network_select
-  
+ 
+		pushl $fdSetValues
+		pushl sockfd
+		call cFD_SET
+		addl $8, %esp
+	
+	# DOESN'T WORK 
+		jmp skip1
     # fd_count++
     addl $1, (%ebx)
     # %ebx = fd_array[0]
@@ -380,21 +391,34 @@
 		movl $4, %ecx
 		mull %ecx
     addl %eax, %ebx
-    # fd_array[sockfd] = 1
-    movl $1, (%ebx)
+    # fd_array[sockfd] = sockfda
+		movl sockfd, %eax
+    movl %eax, (%ebx)
+		skip1:
+	# END DOESN'T WORK
+
 
   network_select:
+		pushl $fdSetValues
+		pushl $0
+		call cFD_SET
+		addl $8, %esp
+
+	# DOESN'T WORK
+		jmp skip2
     movl $fdSetValues, %ebx
     # fd_count++
     addl $1, (%ebx)
     addl $4, %ebx
     # fd_array[0] = 1
-    movl $1, (%ebx)
-      
+    movl $0, (%ebx)
+		skip2:      
+	# END DOESN'T WORK
+
     # Syscall select(sock + 1, &fds, (fd_set *) 0, (fd_set *) 0, &ts);
     movl  $142, %eax
     movl  sockfd, %ebx
-    incl  %ebx
+    addl 	$1, %ebx
     movl  $fdSetValues, %ecx
     movl  $0, %edx
     movl  $0, %esi
@@ -433,7 +457,16 @@
       je check_stdin_file_descriptor
       
       # FD_ISSET(sockfd, &fds)
-      movl $fdSetValues, %edi
+			
+			pushl $fdSetValues
+			pushl sockfd
+			call cFD_SET
+			addl $8, %esp
+			cmpl $0, %eax      
+
+	# DOESN'T WORK
+			jmp skip3
+			movl $fdSetValues, %edi
       addl $4, %edi
 			movl $0, %edx
 			movl $4, %eax
@@ -442,6 +475,9 @@
 			addl %eax, %edi
       # %edi = fd_array[sockfd]
       cmpl $1, (%edi)
+			skip3:
+	# END DOESN'T WORK
+
       # if !FD_ISSET...
       jne check_stdin_file_descriptor
       
@@ -505,9 +541,9 @@
         # - if ordinary data
         if_ordinary_data: 
           movl $readBuffer, %eax
-          movb $'\0', 1(%eax)
-					pushl $1
+          movb $'\0', 2(%eax)
 					pushl $readBuffer
+					pushl $1
           call cWriteString
 					addl $8, %esp
 
@@ -644,8 +680,19 @@
     # if (FD_ISSET (0, ...)) {
     # TODO: read commands from stdin and write to socket
     # FD_ISSET(sockfd, &fds)
+
+		pushl $fdSetValues
+		pushl sockfd
+		call cFD_ISSET
+		addl $8, %esp
+		cmpl $0, %eax
+
+	# DOESN'T WORK
+		jmp skip4
     movl $fdSetValues, %edi
     cmpl $1, 4(%edi)
+		skip4:
+	# END DOESN'T WORK
 
     # if !FD_ISSET(0, ...
     jne network_read_write_loop

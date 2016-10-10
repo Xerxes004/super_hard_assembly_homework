@@ -1,9 +1,112 @@
 	.file	"funcs.c"
 	.text
+	.globl	cFD_SET
+	.type	cFD_SET, @function
+cFD_SET:
+.LFB2:
+	.cfi_startproc
+	pushl	%ebp
+	.cfi_def_cfa_offset 8
+	.cfi_offset 5, -8
+	movl	%esp, %ebp
+	.cfi_def_cfa_register 5
+	pushl	%esi
+	pushl	%ebx
+	.cfi_offset 6, -12
+	.cfi_offset 3, -16
+	movl	8(%ebp), %eax
+	leal	31(%eax), %edx
+	testl	%eax, %eax
+	cmovs	%edx, %eax
+	sarl	$5, %eax
+	movl	12(%ebp), %edx
+	movl	(%edx,%eax,4), %ebx
+	movl	8(%ebp), %edx
+	movl	%edx, %ecx
+	sarl	$31, %ecx
+	shrl	$27, %ecx
+	addl	%ecx, %edx
+	andl	$31, %edx
+	subl	%ecx, %edx
+	movl	$1, %esi
+	movl	%edx, %ecx
+	sall	%cl, %esi
+	movl	%esi, %edx
+	orl	%edx, %ebx
+	movl	%ebx, %ecx
+	movl	12(%ebp), %edx
+	movl	%ecx, (%edx,%eax,4)
+	popl	%ebx
+	.cfi_restore 3
+	popl	%esi
+	.cfi_restore 6
+	popl	%ebp
+	.cfi_restore 5
+	.cfi_def_cfa 4, 4
+	ret
+	.cfi_endproc
+.LFE2:
+	.size	cFD_SET, .-cFD_SET
+	.globl	cFD_ISSET
+	.type	cFD_ISSET, @function
+cFD_ISSET:
+.LFB3:
+	.cfi_startproc
+	pushl	%ebp
+	.cfi_def_cfa_offset 8
+	.cfi_offset 5, -8
+	movl	%esp, %ebp
+	.cfi_def_cfa_register 5
+	movl	8(%ebp), %eax
+	leal	31(%eax), %edx
+	testl	%eax, %eax
+	cmovs	%edx, %eax
+	popl	%ebp
+	.cfi_restore 5
+	.cfi_def_cfa 4, 4
+	ret
+	.cfi_endproc
+.LFE3:
+	.size	cFD_ISSET, .-cFD_ISSET
+	.globl	cFD_ZERO
+	.type	cFD_ZERO, @function
+cFD_ZERO:
+.LFB4:
+	.cfi_startproc
+	pushl	%ebp
+	.cfi_def_cfa_offset 8
+	.cfi_offset 5, -8
+	movl	%esp, %ebp
+	.cfi_def_cfa_register 5
+	pushl	%edi
+	subl	$16, %esp
+	.cfi_offset 7, -12
+	movl	8(%ebp), %edx
+	movl	$0, %eax
+	movl	$32, %ecx
+	movl	%edx, %edi
+#APP
+# 51 "funcs.c" 1
+	cld; rep; stosl
+# 0 "" 2
+#NO_APP
+	movl	%edi, %edx
+	movl	%ecx, -12(%ebp)
+	movl	%edx, -8(%ebp)
+	addl	$16, %esp
+	popl	%edi
+	.cfi_restore 7
+	popl	%ebp
+	.cfi_restore 5
+	.cfi_def_cfa 4, 4
+	ret
+	.cfi_endproc
+.LFE4:
+	.size	cFD_ZERO, .-cFD_ZERO
 	.globl	negotiate
 	.type	negotiate, @function
 negotiate:
-.LFB2:
+.LFB5:
 	.cfi_startproc
 	pushl	%ebp
 	.cfi_def_cfa_offset 8
@@ -20,12 +123,12 @@ negotiate:
 	addl	$1, %eax
 	movzbl	(%eax), %eax
 	cmpb	$-3, %al
-	jne	.L2
+	jne	.L5
 	movl	-44(%ebp), %eax
 	addl	$2, %eax
 	movzbl	(%eax), %eax
 	cmpb	$31, %al
-	jne	.L2
+	jne	.L5
 	movb	$-1, -31(%ebp)
 	movb	$-5, -30(%ebp)
 	movb	$31, -29(%ebp)
@@ -37,10 +140,10 @@ negotiate:
 	movl	%eax, (%esp)
 	call	send
 	testl	%eax, %eax
-	jns	.L3
+	jns	.L6
 	movl	$1, (%esp)
 	call	exit
-.L3:
+.L6:
 	movb	$-1, -21(%ebp)
 	movb	$-6, -20(%ebp)
 	movb	$31, -19(%ebp)
@@ -58,44 +161,44 @@ negotiate:
 	movl	%eax, (%esp)
 	call	send
 	testl	%eax, %eax
-	jns	.L4
+	jns	.L7
 	movl	$1, (%esp)
 	call	exit
-.L4:
+.L7:
 	nop
-	jmp	.L1
-.L2:
+	jmp	.L4
+.L5:
 	movl	$0, -28(%ebp)
-	jmp	.L6
-.L9:
+	jmp	.L9
+.L12:
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movzbl	(%eax), %eax
 	cmpb	$-3, %al
-	jne	.L7
+	jne	.L10
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movb	$-4, (%eax)
-	jmp	.L8
-.L7:
+	jmp	.L11
+.L10:
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movzbl	(%eax), %eax
 	cmpb	$-5, %al
-	jne	.L8
+	jne	.L11
 	movl	-28(%ebp), %edx
 	movl	-44(%ebp), %eax
 	addl	%edx, %eax
 	movb	$-3, (%eax)
-.L8:
+.L11:
 	addl	$1, -28(%ebp)
-.L6:
+.L9:
 	movl	-28(%ebp), %eax
 	cmpl	16(%ebp), %eax
-	jl	.L9
+	jl	.L12
 	movl	16(%ebp), %eax
 	movl	$0, 12(%esp)
 	movl	%eax, 8(%esp)
@@ -105,27 +208,27 @@ negotiate:
 	movl	%eax, (%esp)
 	call	send
 	testl	%eax, %eax
-	jns	.L1
+	jns	.L4
 	movl	$1, (%esp)
 	call	exit
-.L1:
+.L4:
 	movl	-12(%ebp), %eax
 	xorl	%gs:20, %eax
-	je	.L10
+	je	.L13
 	call	__stack_chk_fail
-.L10:
+.L13:
 	leave
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4
 	ret
 	.cfi_endproc
-.LFE2:
+.LFE5:
 	.size	negotiate, .-negotiate
 	.local	tin
 	.comm	tin,60,32
 	.type	terminal_set, @function
 terminal_set:
-.LFB3:
+.LFB6:
 	.cfi_startproc
 	pushl	%ebp
 	.cfi_def_cfa_offset 8
@@ -137,38 +240,38 @@ terminal_set:
 	movl	$0, (%esp)
 	call	tcgetattr
 	movl	tin, %eax
-	movl	%eax, tlocal.3591
+	movl	%eax, tlocal.3604
 	movl	tin+4, %eax
-	movl	%eax, tlocal.3591+4
+	movl	%eax, tlocal.3604+4
 	movl	tin+8, %eax
-	movl	%eax, tlocal.3591+8
+	movl	%eax, tlocal.3604+8
 	movl	tin+12, %eax
-	movl	%eax, tlocal.3591+12
+	movl	%eax, tlocal.3604+12
 	movl	tin+16, %eax
-	movl	%eax, tlocal.3591+16
+	movl	%eax, tlocal.3604+16
 	movl	tin+20, %eax
-	movl	%eax, tlocal.3591+20
+	movl	%eax, tlocal.3604+20
 	movl	tin+24, %eax
-	movl	%eax, tlocal.3591+24
+	movl	%eax, tlocal.3604+24
 	movl	tin+28, %eax
-	movl	%eax, tlocal.3591+28
+	movl	%eax, tlocal.3604+28
 	movl	tin+32, %eax
-	movl	%eax, tlocal.3591+32
+	movl	%eax, tlocal.3604+32
 	movl	tin+36, %eax
-	movl	%eax, tlocal.3591+36
+	movl	%eax, tlocal.3604+36
 	movl	tin+40, %eax
-	movl	%eax, tlocal.3591+40
+	movl	%eax, tlocal.3604+40
 	movl	tin+44, %eax
-	movl	%eax, tlocal.3591+44
+	movl	%eax, tlocal.3604+44
 	movl	tin+48, %eax
-	movl	%eax, tlocal.3591+48
+	movl	%eax, tlocal.3604+48
 	movl	tin+52, %eax
-	movl	%eax, tlocal.3591+52
+	movl	%eax, tlocal.3604+52
 	movl	tin+56, %eax
-	movl	%eax, tlocal.3591+56
-	movl	$tlocal.3591, (%esp)
+	movl	%eax, tlocal.3604+56
+	movl	$tlocal.3604, (%esp)
 	call	cfmakeraw
-	movl	$tlocal.3591, 8(%esp)
+	movl	$tlocal.3604, 8(%esp)
 	movl	$0, 4(%esp)
 	movl	$0, (%esp)
 	call	tcsetattr
@@ -177,11 +280,11 @@ terminal_set:
 	.cfi_def_cfa 4, 4
 	ret
 	.cfi_endproc
-.LFE3:
+.LFE6:
 	.size	terminal_set, .-terminal_set
 	.type	terminal_reset, @function
 terminal_reset:
-.LFB4:
+.LFB7:
 	.cfi_startproc
 	pushl	%ebp
 	.cfi_def_cfa_offset 8
@@ -198,9 +301,29 @@ terminal_reset:
 	.cfi_def_cfa 4, 4
 	ret
 	.cfi_endproc
-.LFE4:
+.LFE7:
 	.size	terminal_reset, .-terminal_reset
-	.local	tlocal.3591
-	.comm	tlocal.3591,60,32
+	.type	cAtexit, @function
+cAtexit:
+.LFB8:
+	.cfi_startproc
+	pushl	%ebp
+	.cfi_def_cfa_offset 8
+	.cfi_offset 5, -8
+	movl	%esp, %ebp
+	.cfi_def_cfa_register 5
+	subl	$24, %esp
+	movl	8(%ebp), %eax
+	movl	%eax, (%esp)
+	call	atexit
+	leave
+	.cfi_restore 5
+	.cfi_def_cfa 4, 4
+	ret
+	.cfi_endproc
+.LFE8:
+	.size	cAtexit, .-cAtexit
+	.local	tlocal.3604
+	.comm	tlocal.3604,60,32
 	.ident	"GCC: (Ubuntu 4.8.2-19ubuntu1) 4.8.2"
 	.section	.note.GNU-stack,"",@progbits
